@@ -2,49 +2,69 @@
 #include "../include/vector_utils.h"
 #include <iostream>
 
-Layer::Layer(int input_count, int output_count, bool output) {
-	weights = Matrix::random(input_count, output_count, 0.0, 1.0);
+Layer::Layer(int input_count, int output_count, bool output, ActivationType activation) {
+	activation_type = activation;
+
+	double min_val = -1.0, max_val = 1.0;
+
+	switch (activation_type) {
+	case ActivationType::sigmoid:
+	{
+		double limit = sqrt(6.0 / (input_count + output_count));
+		min_val = -limit;
+		max_val = limit;
+		break;
+	}
+	case ActivationType::relu:
+	case ActivationType::leaky_relu: {
+		double stddev = sqrt(2.0 / input_count);
+		min_val = -stddev;
+		max_val = stddev;
+		break;
+	}
+	case ActivationType::linear:
+	default:
+		break;
+	}
+
+	weights = Matrix::random(input_count, output_count, min_val, max_val);
+
+	biases.resize(output_count);
+	for (auto& b : biases) {
+		b = ((double)rand() / RAND_MAX - 0.5); // от -0.5 до +0.5
+	}
+	VectorUtils::print(biases, "biases");
+
 	weights.print("Weights initial values: ");
 	is_output_layer = output;
 }
 
-static double sigmoid(double x) {
-	return 1.0 / (1.0 + std::exp(-x));
-}
-
-static double sigmoid_derivative(double x) {
-	double s = sigmoid(x);
-	return s * (1.0 - s);
-}
-
-static double relu(double x) {
-	return x > 0 ? x : 0;
-}
-
-static double relu_derivative(double x) {
-	return x > 0 ? 1.0 : 0.0;
-}
-
-
-const int ACTIVATION_MODE = 0;
-static double activate(double x) {
-	if (ACTIVATION_MODE == 0) {
-		return relu(x);
+double Layer::activate(double x) const {
+	switch (activation_type) {
+	case ActivationType::sigmoid:
+		return 1.0 / (1.0 + std::exp(-x));
+	case ActivationType::relu:
+		return x > 0.0 ? x : 0.0;
+	case ActivationType::leaky_relu:
+		return x > 0.0 ? x : 0.01 * x;
+	case ActivationType::linear:
+	default:
+		return x;
 	}
-	else if (ACTIVATION_MODE == 1) {
-		return sigmoid(x);
-	}
-	return x;
 }
 
-static double activate_derivative(double x) {
-	if (ACTIVATION_MODE == 0) {
-		return relu_derivative(x);
+double Layer::activate_derivative(double y) const {
+	switch (activation_type) {
+	case ActivationType::sigmoid:
+		return y * (1.0 - y);
+	case ActivationType::relu:
+		return y > 0.0 ? 1.0 : 0.0;
+	case ActivationType::leaky_relu:
+		return y > 0.0 ? 1.0 : 0.01;
+	case ActivationType::linear:
+	default:
+		return 1.0;
 	}
-	else if (ACTIVATION_MODE == 1) {
-		return sigmoid_derivative(x);
-	}
-	return x;
 }
 
 
@@ -58,8 +78,22 @@ std::vector<double> Layer::forward(const std::vector<double>& data) {
 		for (int j = 0; j < weights.rows; j++) {
 			sum += data[j] * weights.at(j, i);
 		}
+		sum += biases[i];
 		last_pre_activation[i] = sum;
-		result[i] = is_output_layer ? sum : activate(sum);
+		
+		//result[i] = is_output_layer ? sum : activate(sum);
+		if (is_output_layer) {
+			if (activation_type == ActivationType::linear) {
+				result[i] = sum;
+			}
+			else {
+				result[i] = activate(sum);
+			}
+		}
+		else {
+			result[i] = activate(sum);
+		}
+
 	}
 	last_output = result;
 	return result;
@@ -92,7 +126,13 @@ std::vector<double> Layer::backward(const std::vector<double>& input,
 
 	std::vector<double> activated_deltas(deltas.size());
 	for (size_t i = 0; i < deltas.size(); i++) {
-		activated_deltas[i] = deltas[i] * activate_derivative(last_pre_activation[i]);
+		if (activation_type == ActivationType::sigmoid) {
+			activated_deltas[i] = deltas[i] * activate_derivative(last_output[i]);
+		}
+		else { // relu/leaky relu
+			activated_deltas[i] = deltas[i] * activate_derivative(last_pre_activation[i]);
+		}
+
 	}
 
 	// сохраняем текущие веса в отдельную матрицу перед обновлением,
@@ -103,12 +143,22 @@ std::vector<double> Layer::backward(const std::vector<double>& input,
 
 	Matrix old_weights = weights;
 
-	for (int w = 0; w < weights.rows; w++) {
-		for (int d = 0; d < deltas.size(); d++) {
+	for (int d = 0; d < deltas.size(); d++) {
+		double bias_correction = learning_rate * activated_deltas[d];
+		biases[d] += bias_correction;
+		for (int w = 0; w < weights.rows; w++) {
 			double correction = learning_rate * activated_deltas[d] * input[w];
 			weights.addValue(w, d, correction);
 		}
 	}
+
+	/*for (int w = 0; w < weights.rows; w++) {
+		for (int d = 0; d < deltas.size(); d++) {
+			double correction = learning_rate * activated_deltas[d] * input[w];
+			
+			weights.addValue(w, d, correction);
+		}
+	}*/
 
 	// рассчитываем новые дельты для предыдущего слоя,
 	// которые передадим дальше назад по цепочке слоев.

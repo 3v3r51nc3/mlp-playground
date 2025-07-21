@@ -8,17 +8,16 @@ private:
 	Matrix inputs;
 	std::vector<Layer> layers;
 	Matrix targets;
-	double learning_rate;
 
-	
+	double learning_rate;
+	double mse_stop_point;
+
+	ActivationType activation_type = ActivationType::sigmoid;
 public:
 	NeuralNetwork() {
-
-		layers = { Layer(inputs.cols, targets.cols) };
-		learning_rate = 0.001;
 	}
 
-	NeuralNetwork(Matrix inputs, Matrix targets, double learning_rate);
+	NeuralNetwork(Matrix inputs, Matrix targets, double learning_rate, ActivationType activation = ActivationType::sigmoid, double mse_stop_point = 0.01);
 	~NeuralNetwork();
 
 	void train(int epoch_count);

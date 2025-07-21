@@ -3,8 +3,9 @@
 #include <iostream>
 #include <iomanip>
 
-NeuralNetwork::NeuralNetwork(Matrix input, Matrix target, double learning_rate) : inputs(input), targets(target), learning_rate(learning_rate) {
-	//add_layer(inputs.cols, targets.cols);
+NeuralNetwork::NeuralNetwork(Matrix input, Matrix target, double learning_rate, ActivationType activation, double mse_stop_point) : inputs(input), 
+targets(target), learning_rate(learning_rate), activation_type(activation), mse_stop_point(mse_stop_point) {
+
 }
 
 NeuralNetwork::~NeuralNetwork() {
@@ -68,8 +69,11 @@ void NeuralNetwork::train(int epoch_times) {
 		if ((epoch + 1) % print_every_n_epochs == 0 || epoch == 0 || epoch_mse < 0.0001) {
 			std::cout << "epoch " << epoch + 1 << " | mse = " << epoch_mse << "\n";
 		}
-		if (epoch_mse < 0.0001) {
-			std::cout << "MSE is too low, no need to continue training... Quitting cycle"  << "\n";
+		if (epoch_mse < mse_stop_point) {
+			std::cout << std::fixed << std::setprecision(4);
+			std::cout << "MSE is too low ("<< epoch_mse << "), no need to continue training... Quitting cycle"  << "\n";
+			std::cout.unsetf(std::ios::fixed); // чтобы вернуть в обычный режим вывода
+			std::cout << std::setprecision(2); // можно сбросить, если нужно
 			break;
 		}
 	}

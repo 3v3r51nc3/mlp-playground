@@ -34,32 +34,32 @@ int main() {
 		});
 	targets.print("Output target values: ");
 
-	NeuralNetwork neural_network(inputs, targets, 0.01); //sigmoid = 0.1 //ReLU 0.01 or 0.001
+	NeuralNetwork neural_network(inputs, targets, 0.1, ActivationType::leaky_relu); //sigmoid = 0.1 //ReLU 0.01 or 0.001
 		
-	constexpr int NETWORK_MODE = 1;
+	constexpr int NETWORK_MODE = 3;
 	if (NETWORK_MODE == 0) {
 		// no hidden layers
 		neural_network.add_layer(inputs.cols, targets.cols, true);
 	}
-	else if (NETWORK_MODE == 1) {
+	else if (NETWORK_MODE == 1) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01)
 		// one hidden layer (6 нейронов)
 		neural_network.add_layer(inputs.cols, 6);
 		neural_network.add_layer(6, targets.cols, true);
 	}
-	else if (NETWORK_MODE == 2) {
+	else if (NETWORK_MODE == 2) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01)
 		// two hidden layers (6 -> 6)
 		neural_network.add_layer(inputs.cols, 6);
 		neural_network.add_layer(6, 6);
 		neural_network.add_layer(6, targets.cols, true);
 	}
-	else if (NETWORK_MODE == 3) { //doesn't work
+	else if (NETWORK_MODE == 3) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01), doesn't work
 		// two hidden layers (16 -> 8 -> 4)
 		neural_network.add_layer(inputs.cols, 16);
 		neural_network.add_layer(16, 8);
 		neural_network.add_layer(8, 4);
 		neural_network.add_layer(4, targets.cols, true);
 	}
-	else if (NETWORK_MODE == 4) {
+	else if (NETWORK_MODE == 4) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01), sigmoid: плохо работает (learning_rate = 0.1)
 		// two hidden layers (4 -> 8 -> 16)
 		neural_network.add_layer(inputs.cols, 4);
 		neural_network.add_layer(4, 8);
