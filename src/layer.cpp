@@ -2,8 +2,9 @@
 #include "../include/vector_utils.h"
 #include <iostream>
 
-Layer::Layer(int input_count, int output_count, bool output, ActivationType activation) {
+Layer::Layer(int input_count, int output_count, bool output, ActivationType activation, bool debug_info) {
 	activation_type = activation;
+	this->debug_info = debug_info;
 
 	double min_val = -1.0, max_val = 1.0;
 
@@ -33,9 +34,10 @@ Layer::Layer(int input_count, int output_count, bool output, ActivationType acti
 	for (auto& b : biases) {
 		b = ((double)rand() / RAND_MAX - 0.5); // от -0.5 до +0.5
 	}
-	VectorUtils::print(biases, "biases");
 
-	weights.print("Weights initial values: ");
+	if (debug_info) VectorUtils::print(biases, "biases");
+	if (debug_info) weights.print("Weights initial values: ");
+
 	is_output_layer = output;
 }
 

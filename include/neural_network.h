@@ -13,6 +13,8 @@ private:
 	double mse_stop_point;
 
 	ActivationType activation_type = ActivationType::sigmoid;
+
+	const bool debug_info = false;
 public:
 	NeuralNetwork() {
 	}

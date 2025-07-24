@@ -86,12 +86,12 @@ std::vector<double> NeuralNetwork::predict(const std::vector<double>& input) {
 	_ASSERT(input.size() == inputs.cols);
 	std::vector<double> output = input;
 
-	VectorUtils::print(output, "input");
+	if (debug_info) VectorUtils::print(output, "input");
 	for (auto& layer : layers) {
 		output = layer.forward(output);
 	}
 
-	VectorUtils::print(output, "prediction");
+	if (debug_info) VectorUtils::print(output, "prediction");
 
 	return output;
 }

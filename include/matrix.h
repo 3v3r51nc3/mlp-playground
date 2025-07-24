@@ -31,6 +31,14 @@ public:
     Matrix operator*(const Matrix& other) const;
     Matrix& operator=(const Matrix& other);
 
+    double& operator()(int i, int j) {
+        return data[i][j];
+    }
+
+    double operator()(int i, int j) const {
+        return data[i][j];
+    }
+
     // создаёт матрицу из одинаковых значений
     static Matrix from_value(int rows, int cols, double val);
 

@@ -21,9 +21,11 @@ private:
 
 	double activate(double x) const;
 	double activate_derivative(double activated_output) const;
+
+	bool debug_info;
 public:
 	Layer() {};
-	Layer(int input_count, int output_count, bool output = false, ActivationType activation = ActivationType::sigmoid);
+	Layer(int input_count, int output_count, bool output = false, ActivationType activation = ActivationType::sigmoid, bool debug_info = false);
 
 	std::vector<double> forward(const std::vector<double>& data);
 	std::vector<double> backward(const std::vector<double>& input,

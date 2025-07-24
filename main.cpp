@@ -2,110 +2,94 @@
 #include "include/neural_network.h"
 #include "include/matrix.h"
 #include "include/vector_utils.h"
+#include "include/mnist_loader.h"
+
+#include <fstream>
+#include <cstdint>
+#include <filesystem>
+
+
+
+namespace fs = std::filesystem;
+
 int main() {
-	//6x4
-	/*Matrix inputs = Matrix({ //weather conditions as example (6 rows (samples), 5 cols (params))
-			{20.0, 0.40, 3.0, 0.95, 0.05},  // почти идеальные условия — можно
-			{18.0, 0.60, 6.5, 0.8, 0.2},   // ветер средний — ограничено
-			{16.0, 0.75, 8.0, 0.6, 0.3},   // ветер, влажность — ограничено
-			{14.0, 0.85, 10.0, 0.4, 0.6},  // почти буря — нельзя
-			{23.0, 0.35, 2.5, 0.98, 0.0},  // супер — можно
-			{19.0, 0.70, 7.0, 0.7, 0.4}    // не идеально, но сойдёт — ограничено
-		});;*/
-	Matrix inputs = Matrix({
-			{0.8696, 0.25, 0.1765, 0.9167, 0.0833},
-			{0.5217, 0.75, 0.6176, 0.5833, 0.3333},
-			{0.3043, 1.0, 0.8235, 0.0833, 0.5},
-			{0.0,    1.25, 1.0,    0.0,    1.0},
-			{1.0,    0.0,  0.0,    1.0,    0.0},
-			{0.6522, 0.875, 0.7059, 0.5,   0.6667}
-	});
 
-	inputs.print("Weather conditions");
+	fs::path current_dir = fs::current_path();
 
-	//6x3 same as input also (bad example)
-	Matrix targets = Matrix({ //drone decisions as example
-		{0, 0, 1}, // можно
-		{0, 1, 0}, // ограничено
-		{0, 1, 0}, // ограничено
-		{1, 0, 0}, // нельзя
-		{0, 0, 1}, // можно
-		{0, 1, 0}  // ограничено
-		});
-	targets.print("Output target values: ");
+	std::cout << "Текущая директория: " << current_dir << "\n";
 
-	NeuralNetwork neural_network(inputs, targets, 0.1, ActivationType::leaky_relu); //sigmoid = 0.1 //ReLU 0.01 or 0.001
-		
-	constexpr int NETWORK_MODE = 3;
-	if (NETWORK_MODE == 0) {
-		// no hidden layers
-		neural_network.add_layer(inputs.cols, targets.cols, true);
-	}
-	else if (NETWORK_MODE == 1) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01)
-		// one hidden layer (6 нейронов)
-		neural_network.add_layer(inputs.cols, 6);
-		neural_network.add_layer(6, targets.cols, true);
-	}
-	else if (NETWORK_MODE == 2) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01)
-		// two hidden layers (6 -> 6)
-		neural_network.add_layer(inputs.cols, 6);
-		neural_network.add_layer(6, 6);
-		neural_network.add_layer(6, targets.cols, true);
-	}
-	else if (NETWORK_MODE == 3) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01), doesn't work
-		// two hidden layers (16 -> 8 -> 4)
-		neural_network.add_layer(inputs.cols, 16);
-		neural_network.add_layer(16, 8);
-		neural_network.add_layer(8, 4);
-		neural_network.add_layer(4, targets.cols, true);
-	}
-	else if (NETWORK_MODE == 4) { // relu: вообще не работает (ошибка застряет, learning_rate = 0.01), sigmoid: плохо работает (learning_rate = 0.1)
-		// two hidden layers (4 -> 8 -> 16)
-		neural_network.add_layer(inputs.cols, 4);
-		neural_network.add_layer(4, 8);
-		neural_network.add_layer(8, 16);
-		neural_network.add_layer(16, targets.cols, true);
+	int num_train_images, rows, cols;
+	auto train_images = MnistLoader::load_images("datasets/train-images.idx3-ubyte", num_train_images, rows, cols);
+
+	int num_train_labels;
+	auto train_labels = MnistLoader::load_labels("datasets/train-labels.idx1-ubyte", num_train_labels);
+
+	//1000 samples
+	const int TRAIN_SIZE = 1000;
+	Matrix inputs(TRAIN_SIZE, rows * cols);
+	Matrix targets(TRAIN_SIZE, 10); // 10 выходов в конце (классов)
+
+	for (int i = 0; i < TRAIN_SIZE; ++i) {
+		// проходим по каждому из TRAIN_SIZE обучающих примеров
+
+		for (int j = 0; j < rows * cols; ++j) {
+			// для каждого пикселя изображения (rows * cols - размер одного изображения)
+			// нормализуем значение пикселя из диапазона [0, 255] в [0, 1] для удобства обучения нейросети
+			// 0 - черный, 1 - белый
+			inputs(i, j) = train_images[i][j] / 255.0f;
+		}
+
+		// инициализируем вектор целей (one-hot encoding) длиной 10 (число классов в MNIST — цифры 0-9)
+		for (int j = 0; j < 10; ++j)
+			targets(i, j) = 0.0f;
+
+		// ставим 1.0 в позиции, соответствующей метке train_labels[i]
+		// таким образом создаём правильный "ответ" для обучения нейросети (one-hot)
+		targets(i, train_labels[i]) = 1.0f;
 	}
 
-	neural_network.train(10000);
+	//training
+	NeuralNetwork net(inputs, targets, 0.1f, ActivationType::sigmoid); // можно relu/sigmoid
 
-	Matrix test_inputs = Matrix({
-			{0.9130, 0.125, 0.1176, 0.9583, 0.0417},  // почти идеально — должно быть {0, 0, 1}
-			{0.4783, 0.625, 0.5882, 0.6667, 0.2917},  // средне — {0, 1, 0}
-			{0.2174, 1.125, 0.9412, 0.2083, 0.7083},  // почти буря — {1, 0, 0}
-			{0.8261, 0.375, 0.2941, 0.875, 0.125},    // хорошее — {0, 0, 1}
-			{0.3913, 0.8125, 0.7647, 0.4167, 0.4167}  // граничное — {0, 1, 0}
-	});
+	net.add_layer(inputs.cols, 64);
+	net.add_layer(64, 32);
+	net.add_layer(32, 10, true);
+
+	net.train(15); // можно 10–20 эпох — больше не нужно на 1000 примерах
 
 
-	std::cout << "Predicting! Testing!\n\n";
-	for (int i = 0; i < test_inputs.rows; i++) {
-		std::cout << "Prediction " << i + 1 << ": \n";
-		neural_network.predict(test_inputs.getRow(i));
-		//VectorUtils::print(targets.getRow(i), "targets");
+	int num_test_images, test_rows, test_cols;
+	auto test_images = MnistLoader::load_images("datasets/t10k-images.idx3-ubyte", num_test_images, test_rows, test_cols);
+
+	int num_test_labels;
+	auto test_labels = MnistLoader::load_labels("datasets/t10k-labels.idx1-ubyte", num_test_labels);
+
+	int TEST_SIZE = 100;
+	int correct = 0;
+
+	for (int i = 0; i < TEST_SIZE; ++i) {
+		std::vector<double> test_input;
+		for (int j = 0; j < test_rows * test_cols; ++j)
+			test_input.push_back(test_images[i][j] / 255.0);
+
+		auto predicted_vector = net.predict(test_input);
+
+		int predicted = 0;
+		double max_value = predicted_vector[0];
+		for (int z = 1; z < predicted_vector.size(); z++) {
+			if (predicted_vector[z] > max_value) {
+				max_value = predicted_vector[z];
+				predicted = z;
+			}
+		}
+
+		int actual = test_labels[i];
+
+		std::cout << "Predicted: " << predicted << " | Actual: " << actual << "\n";
+
+		if (predicted == actual) correct++;
 	}
-	
 
-	std::cout << "\nHello world!\n";
-	system("pause");
-	return 0;
+	double accuracy = (double)correct / TEST_SIZE;
+	std::cout << "Accuracy on " << TEST_SIZE << " test samples: " << accuracy * 100 << "%\n";
 }
-
-/*
-
-я устал пойду отдыхать
-22:22 20/07/2025
-
-ок, давай разберёмся по шагам, почему сеть тупит и mse висит на 0.33 без изменений.
-
-нормализация — хорошая идея, но она не решит основную проблему. скорее всего, у тебя слишком большой разброс значений, и relu без смещения плохо обучается.
-
-отсутствие смещений (bias) — у тебя в слое только веса, но нет bias, а без них relu сильно ограничена и не может сдвигать функцию активации, из-за чего обучение может застопориться.
-
-вектор дельт в обратном проходе — в backward ты используешь deltas, но умножаешь их на relu_derivative(last_output[i]), а last_output[i] — это уже активация relu (всегда >=0), а производную нужно считать по сумме входов до активации, а не по выходу relu.
-
-веса обновляешь по learning_rate * activated_deltas[d] * input[w], но активация дельт неверна, плюс не учитываешь bias
-
-
-
-*/

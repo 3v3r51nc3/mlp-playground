@@ -104,6 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,6 +129,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\layer.cpp" />
+    <ClCompile Include="src\mnist_loader.cpp" />
     <ClCompile Include="src\vector_utils.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\matrix.cpp" />
@@ -136,6 +138,7 @@
   <ItemGroup>
     <ClInclude Include="include\layer.h" />
     <ClInclude Include="include\matrix.h" />
+    <ClInclude Include="include\mnist_loader.h" />
     <ClInclude Include="include\neural_network.h" />
     <ClInclude Include="include\vector_utils.h" />
   </ItemGroup>
