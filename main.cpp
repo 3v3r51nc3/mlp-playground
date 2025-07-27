@@ -47,11 +47,14 @@ int main() {
 	}
 
 	//training
-	NeuralNetwork net(inputs, targets, 0.1f, ActivationType::leaky_relu); // можно relu/sigmoid
+	NeuralNetwork net(inputs, targets, 0.1, 0); // можно relu/sigmoid
 
-	net.add_layer(inputs.cols, 64);
-	net.add_layer(64, 32);
-	net.add_layer(32, 10, true);
+	ActivationType hidden_activation = ActivationType::tanh;
+	ActivationType output_activation = ActivationType::sigmoid;
+
+	net.add_layer(inputs.cols, 128, hidden_activation);
+	net.add_layer(128, 64, hidden_activation);
+	net.add_layer(64, 10, output_activation, true);
 
 	net.train(100, GradientDescentType::Stochastic, 16); // можно 10–20 эпох — больше не нужно на 1000 примерах
 

@@ -1,7 +1,9 @@
 ﻿#include "../include/layer.h"
 #include <iostream>
+#include <random>
 
-Layer::Layer(int input_count, int output_count, bool output, ActivationType activation, bool debug_info) {
+Layer::Layer(int input_count, int output_count, double dropout_rate, bool output, ActivationType activation, bool debug_info) {
+	this->dropout_rate = dropout_rate;
 	activation_type = activation;
 	this->debug_info = debug_info;
 
@@ -9,6 +11,7 @@ Layer::Layer(int input_count, int output_count, bool output, ActivationType acti
 
 	switch (activation_type) {
 	case ActivationType::sigmoid:
+	case ActivationType::tanh:
 	{
 		double limit = sqrt(6.0 / (input_count + output_count));
 		min_val = -limit;
@@ -51,12 +54,14 @@ std::vector<double> Layer::forward(const std::vector<double>& data) {
 	// применяем dropout только если включен и это НЕ выходной слой (dropout не для выхода)
 	if (dropout_enabled && !is_output_layer) {
 		generate_dropout_mask(result.size());
+
+		//VectorUtils::print(dropout_mask, "dropout mask");
 		for (int i = 0; i < result.size(); ++i) {
 			if (dropout_mask[i]) {
-				result[i] = 0.0; // "выключили" нейрон
+				result[i] /= (1.0 - dropout_rate); // усиливаем активные
 			}
 			else {
-				result[i] /= (1.0 - dropout_rate); // усиливаем, чтобы компенсировать
+				result[i] = 0.0; // выключаем
 			}
 		}
 	}
@@ -113,13 +118,19 @@ LayerGradients Layer::compute_gradients(const std::vector<double>& input,
 	auto activation_derivative = VectorUtils::apply_activation_derivative(base_vec, activation_type);
 	auto activated_deltas = VectorUtils::elementwise_multiply(deltas, activation_derivative);
 
+	if (dropout_enabled && !is_output_layer) {
+		for (int i = 0; i < activated_deltas.size(); ++i) {
+			activated_deltas[i] *= dropout_mask[i];
+		}
+	}
+
 	// dW = input outer activated_deltas
 	Matrix dW = VectorUtils::outer_product(input, activated_deltas);
 
 	// dB = activated_deltas
 	std::vector<double> dB = activated_deltas;
 
-	// new_deltas = Wᵗ * δ̂
+	// new_deltas = Wᵗ * activated_deltas
 	std::vector<double> new_deltas = VectorUtils::mat_vec_mul(weights, activated_deltas);
 
 	return { dW, dB, new_deltas };
@@ -155,8 +166,12 @@ void Layer::apply_accumulated_gradients(double learning_rate) {
 
 void Layer::generate_dropout_mask(int size) {
 	dropout_mask.resize(size);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::bernoulli_distribution dist(1.0 - dropout_rate);
+
 	for (int i = 0; i < size; ++i) {
-		dropout_mask[i] = (rand() / double(RAND_MAX)) > dropout_rate;
+		dropout_mask[i] = dist(gen);
 	}
 }
 

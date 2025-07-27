@@ -17,7 +17,7 @@ struct LayerGradients {
 
 class Layer {
 public:
-    Layer(int input_count, int output_count, bool output = false, ActivationType activation = ActivationType::sigmoid, bool debug_info = false);
+    Layer(int input_count, int output_count, double dropout_rate, bool output = false, ActivationType activation = ActivationType::sigmoid, bool debug_info = false);
 
     std::vector<double> forward(const std::vector<double>& input);
     std::vector<double> backward(const std::vector<double>& input, const std::vector<double>& deltas, double learning_rate);
@@ -45,7 +45,7 @@ private:
     int accum_count = 0;
 
     bool dropout_enabled = false;
-    double dropout_rate = 0.5;
+    double dropout_rate;
     std::vector<bool> dropout_mask;
     void generate_dropout_mask(int size);
 

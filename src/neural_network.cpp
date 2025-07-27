@@ -3,8 +3,8 @@
 #include <iostream>
 #include <iomanip>
 
-NeuralNetwork::NeuralNetwork(Matrix input, Matrix target, double learning_rate, ActivationType activation, double mse_stop_point) : inputs(input), 
-targets(target), learning_rate(learning_rate), activation_type(activation), mse_stop_point(mse_stop_point) {
+NeuralNetwork::NeuralNetwork(Matrix input, Matrix target, double learning_rate, double dropout_rate, double mse_stop_point) : inputs(input), 
+targets(target), learning_rate(learning_rate), dropout_rate(dropout_rate), mse_stop_point(mse_stop_point) {
 
 }
 
@@ -60,7 +60,7 @@ void NeuralNetwork::train(int epoch_times, GradientDescentType gd_type, int mini
 
 	std::cout << "	sample count: " << inputs.rows << "\n";
 	std::cout << "	learning rate: " << learning_rate << "\n";
-	std::cout << "	activation_type: " << activationToString(activation_type) << "\n";
+	std::cout << "	dropout rate: " << dropout_rate << "\n";
 	std::cout << "	gradient descent type: " << gdTypeToString(gd_type) << "\n";
 	if (gd_type == GradientDescentType::MiniBatch) std::cout << "	mini-batch size: " << mini_batch_size << "\n";
 	std::cout << "	epoch count: " << epoch_times << "\n";
@@ -100,8 +100,8 @@ void NeuralNetwork::train(int epoch_times, GradientDescentType gd_type, int mini
 				std::vector<std::vector<double>> activations;
 				activations.push_back(input); //first input layer is never activated
 				for (auto& layer : layers) {
-					//layer.setDropoutEnabled(!layer.isOutputLayer());
-					layer.setDropoutEnabled(false);
+					layer.setDropoutEnabled(!layer.isOutputLayer() && dropout_rate > 0);
+					//layer.setDropoutEnabled(false);
 
 					input = layer.forward(input);
 					activations.push_back(input);
@@ -177,42 +177,9 @@ std::vector<double> NeuralNetwork::predict(const std::vector<double>& input) {
 	return output;
 }
 
-Layer& NeuralNetwork::add_layer(int input_size, int output_size, bool is_output) {
-	Layer new_layer(input_size, output_size, is_output);
+Layer& NeuralNetwork::add_layer(int input_size, int output_size, ActivationType activation, bool is_output) {
+	Layer new_layer(input_size, output_size, dropout_rate, is_output);
 	layers.push_back(new_layer);
 
 	return layers[layers.size() - 1];
-}
-
-void NeuralNetwork::insert_layer(int neurons_count) {
-	if (layers.empty()) {
-		layers.push_back(Layer(inputs.cols, neurons_count));
-		layers.push_back(Layer(neurons_count, targets.cols));
-	}
-	else {
-		// сохраним выходной слой
-		Layer output_layer = std::move(layers.back());
-		int output_output_size = output_layer.getOutputSize();
-
-		// удаляем выходной слой
-		layers.pop_back();
-
-		// вычисляем размер входа для нового скрытого слоя
-		int prev_output_size;
-		if (layers.empty()) {
-			// если после pop_back сеть пуста (значит был 1 слой), вход берём с inputs
-			prev_output_size = inputs.cols;
-		}
-		else {
-			// иначе берём выход предпоследнего слоя
-			prev_output_size = layers.back().getOutputSize();
-		}
-
-		// добавляем новый скрытый слой
-		layers.push_back(Layer(prev_output_size, neurons_count));
-
-		// возвращаем выходной слой с подгонкой размеров весов
-		layers.push_back(std::move(output_layer));
-		layers.back().resize_weights(neurons_count, output_output_size);
-	}
 }

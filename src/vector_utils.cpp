@@ -3,6 +3,22 @@
 #include <numeric>
 #include <iomanip>
 
+void VectorUtils::print(const std::vector<int>& vec, const std::string& name) {
+    std::cout << name << " (" << vec.size() << "): { ";
+    for (const auto& val : vec) {
+        std::cout << std::fixed << std::setprecision(4) << val << " ";
+    }
+    std::cout << "}\n";
+}
+
+void VectorUtils::print(const std::vector<bool>& vec, const std::string& name) {
+    std::cout << name << " (" << vec.size() << "): { ";
+    for (const auto& val : vec) {
+        std::cout << std::fixed << std::setprecision(4) << val << " ";
+    }
+    std::cout << "}\n";
+}
+
 void VectorUtils::print(const std::vector<double>& vec, const std::string& name) {
     std::cout << name << " (" << vec.size() << "): { ";
     for (const auto& val : vec) {
@@ -76,6 +92,8 @@ static double activate(double x, ActivationType activation_type){
     switch (activation_type) {
     case ActivationType::sigmoid:
         return Activation::sigmoid(x);
+    case ActivationType::tanh:
+        return Activation::sigmoid(x);
     case ActivationType::relu:
         return Activation::relu(x);
     case ActivationType::leaky_relu:
@@ -90,6 +108,8 @@ static double activate_derivative(double y, ActivationType activation_type) {
     switch (activation_type) {
     case ActivationType::sigmoid:
         return Activation::sigmoid_derivative(y);
+    case ActivationType::tanh:
+        return Activation::tanh_derivative(y);
     case ActivationType::relu:
         return Activation::relu_derivative(y);
     case ActivationType::leaky_relu:
