@@ -42,6 +42,10 @@ public:
 		return weights.cols;  // число выходов
 	}
 
+	bool isOutputLayer() const {
+		return is_output_layer;
+	}
+
 	void print(const std::string& name = "Layer") const;
 };
 

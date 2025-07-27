@@ -12,8 +12,45 @@ NeuralNetwork::~NeuralNetwork() {
 
 }
 
+std::string activationToString(ActivationType act) {
+	switch (act) {
+	case ActivationType::sigmoid: return "sigmoid";
+	case ActivationType::relu: return "relu";
+	case ActivationType::linear: return "linear";
+	default: return "unknown";
+	}
+}
+
 void NeuralNetwork::train(int epoch_times) {
-	std::cout << "training started!\n\n";
+	std::cout << "Training started!\n\n";
+
+	std::cout << "Network structure:\n";
+
+	for (size_t i = 0; i < layers.size(); ++i) {
+		const Layer& layer = layers[i];
+		int input_size = layer.getInputSize();
+		int output_size = layer.getOutputSize();
+
+		if (i == 0) {
+			std::cout << "(input) " << input_size << " -> " << output_size;
+		}
+		else {
+			std::cout << " -> " << output_size;
+		}
+
+		if (layer.isOutputLayer()) {
+			std::cout << " (output)";
+		}
+	}
+	std::cout << "\n\n";
+
+
+	std::cout << "Network params:\n";
+
+	std::cout << "	epoch count: " << epoch_times << "\n";
+	std::cout << "	mse_stop_point: " << mse_stop_point << "\n";
+	std::cout << "	learning rate: " << learning_rate << "\n";
+	std::cout << "	activation_type: " << activationToString(activation_type) << "\n\n";
 
 	int print_every_n_epochs = 1;
 	if (epoch_times > 10000) print_every_n_epochs = 1000;

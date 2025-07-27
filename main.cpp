@@ -16,7 +16,7 @@ int main() {
 
 	fs::path current_dir = fs::current_path();
 
-	std::cout << "Текущая директория: " << current_dir << "\n";
+	std::cout << "Current directory: " << current_dir << "\n\n";
 
 	int num_train_images, rows, cols;
 	auto train_images = MnistLoader::load_images("datasets/train-images.idx3-ubyte", num_train_images, rows, cols);
