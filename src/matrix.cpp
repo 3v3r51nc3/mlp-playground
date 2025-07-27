@@ -107,6 +107,15 @@ Matrix Matrix::operator*(const Matrix& other) const {
     return result;
 }
 
+Matrix Matrix::operator*(double x) const
+{
+    Matrix result(rows, cols);
+    for (int i = 0; i < rows; i++)
+        for (int j = 0; j < cols; j++)
+            result.at(i, j) += data[i][j] * x;
+    return result;
+}
+
 Matrix& Matrix::operator=(const Matrix& other) {
     if (this == &other)  // защита от самоприсваивания
         return *this;
@@ -115,6 +124,28 @@ Matrix& Matrix::operator=(const Matrix& other) {
     cols = other.cols;
     data = other.data;  // std::vector умеет сам корректно копировать данные
 
+    return *this;
+}
+
+Matrix& Matrix::operator+=(const Matrix& other) {
+    if (rows != other.rows || cols != other.cols) {
+        throw std::invalid_argument("Matrix dimensions must match for operator+=");
+    }
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            // предполагаю, что у тебя есть метод доступа at(r,c)
+            this->at(r, c) += other.at(r, c);
+        }
+    }
+    return *this;
+}
+
+Matrix& Matrix::operator*=(double scalar) {
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            this->at(r, c) *= scalar;
+        }
+    }
     return *this;
 }
 

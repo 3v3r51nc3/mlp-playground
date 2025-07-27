@@ -29,7 +29,10 @@ public:
     Matrix transpose() const;
     Matrix operator+(const Matrix& other) const;
     Matrix operator*(const Matrix& other) const;
+    Matrix operator*(double x) const;
     Matrix& operator=(const Matrix& other);
+    Matrix& operator+=(const Matrix& other);
+    Matrix& operator*=(double scalar);
 
     double& operator()(int i, int j) {
         return data[i][j];

@@ -1,5 +1,4 @@
 ﻿#include "../include/layer.h"
-#include "../include/vector_utils.h"
 #include <iostream>
 
 Layer::Layer(int input_count, int output_count, bool output, ActivationType activation, bool debug_info) {
@@ -41,62 +40,14 @@ Layer::Layer(int input_count, int output_count, bool output, ActivationType acti
 	is_output_layer = output;
 }
 
-double Layer::activate(double x) const {
-	switch (activation_type) {
-	case ActivationType::sigmoid:
-		return 1.0 / (1.0 + std::exp(-x));
-	case ActivationType::relu:
-		return x > 0.0 ? x : 0.0;
-	case ActivationType::leaky_relu:
-		return x > 0.0 ? x : 0.01 * x;
-	case ActivationType::linear:
-	default:
-		return x;
-	}
-}
-
-double Layer::activate_derivative(double y) const {
-	switch (activation_type) {
-	case ActivationType::sigmoid:
-		return y * (1.0 - y);
-	case ActivationType::relu:
-		return y > 0.0 ? 1.0 : 0.0;
-	case ActivationType::leaky_relu:
-		return y > 0.0 ? 1.0 : 0.01;
-	case ActivationType::linear:
-	default:
-		return 1.0;
-	}
-}
-
-
-//АКТИВАЦИЯ ТОЛЬКО МЕЖДУ СЛОЯМИ НЕ НА ВЫХОДЕ
+//АКТИВАЦИЯ ТОЛЬКО МЕЖДУ СЛОЯМИ НЕ НА ВЫХОДЕ	(НЕ ВСЕГДА)
 std::vector<double> Layer::forward(const std::vector<double>& data) {
-	std::vector<double> result(weights.cols, 0);
-	last_pre_activation.resize(weights.cols);  // выделяем память
+	auto z = VectorUtils::vec_mat_mul(data, weights);
+	VectorUtils::add_bias(z, biases);
+	last_pre_activation = z;
 
-	for (int i = 0; i < weights.cols; i++) {
-		double sum = 0;
-		for (int j = 0; j < weights.rows; j++) {
-			sum += data[j] * weights.at(j, i);
-		}
-		sum += biases[i];
-		last_pre_activation[i] = sum;
-		
-		//result[i] = is_output_layer ? sum : activate(sum);
-		if (is_output_layer) {
-			if (activation_type == ActivationType::linear) {
-				result[i] = sum;
-			}
-			else {
-				result[i] = activate(sum);
-			}
-		}
-		else {
-			result[i] = activate(sum);
-		}
+	auto result = (is_output_layer && activation_type == ActivationType::linear) ? z : VectorUtils::apply_activation(z, activation_type);
 
-	}
 	last_output = result;
 	return result;
 }
@@ -126,60 +77,28 @@ std::vector<double> Layer::backward(const std::vector<double>& input,
 	_ASSERT(deltas.size() == weights.cols);
 	_ASSERT(input.size() == weights.rows);
 
-	std::vector<double> activated_deltas(deltas.size());
-	for (size_t i = 0; i < deltas.size(); i++) {
-		if (activation_type == ActivationType::sigmoid) {
-			activated_deltas[i] = deltas[i] * activate_derivative(last_output[i]);
-		}
-		else { // relu/leaky relu
-			activated_deltas[i] = deltas[i] * activate_derivative(last_pre_activation[i]);
-		}
+	// 1. вычисляем производную активации и активированные дельты: δ̂ = δ ⊙ σ'(z)
+	const auto& base_vec = (activation_type == ActivationType::sigmoid) ? last_output : last_pre_activation;
+	auto activation_derivative = VectorUtils::apply_activation_derivative(base_vec, activation_type);
+	auto activated_deltas = VectorUtils::elementwise_multiply(deltas, activation_derivative);
 
-	}
-
-	// сохраняем текущие веса в отдельную матрицу перед обновлением,
-	// потому что для вычисления новых дельт (ошибок для предыдущего слоя)
-	// нужно использовать именно веса, которые были во время прямого прохода (forward pass),
-	// а не уже обновленные.
-	// это важно, чтобы не исказить градиенты и сохранить корректное направление обучения
-
+	// 2. сохраняем копию старых весов для вычисления новых дельт
 	Matrix old_weights = weights;
 
-	for (int d = 0; d < deltas.size(); d++) {
-		double bias_correction = learning_rate * activated_deltas[d];
-		biases[d] += bias_correction;
-		for (int w = 0; w < weights.rows; w++) {
-			double correction = learning_rate * activated_deltas[d] * input[w];
-			weights.addValue(w, d, correction);
-		}
-	}
-
-	/*for (int w = 0; w < weights.rows; w++) {
-		for (int d = 0; d < deltas.size(); d++) {
-			double correction = learning_rate * activated_deltas[d] * input[w];
-			
-			weights.addValue(w, d, correction);
-		}
-	}*/
-
-	// рассчитываем новые дельты для предыдущего слоя,
-	// которые передадим дальше назад по цепочке слоев.
-	// для этого перемножаем старые веса на дельты текущего слоя.
-	// используем старые веса, потому что они соответствуют моменту прямого прохода,
-	// и отражают реальное влияние входов на текущий слой.
-	// вычисление новых дельт:
-	// new_delta[i] = sum_j (old_weights[i][j] * deltas[j])
-
-	std::vector<double> new_deltas(weights.rows, 0.0);
-	for (int row = 0; row < old_weights.rows; row++) {
-		for (int col = 0; col < old_weights.cols; col++) {
-			new_deltas[row] += old_weights.at(row, col) * activated_deltas[col];//deltas[col];
-		}
-	}
+	// 3. обновляем смещения (biases)
+	auto scaled_deltas = VectorUtils::scalar_multiply(activated_deltas, learning_rate);
+	VectorUtils::add_inplace(biases, scaled_deltas);
 	
+	// 4. обновляем веса через внешнее произведение и добавляем к матрице весов
+	Matrix correction = VectorUtils::outer_product(input, activated_deltas);
+	correction *= learning_rate;
+	weights += correction; // либо перегрузка оператора +=
+
+	// 5. вычисляем новые дельты для предыдущего слоя: δ^(l-1) = W^T · δ̂
+	auto new_deltas = VectorUtils::mat_vec_mul(old_weights, activated_deltas);
+
 	return new_deltas;
 }
-
 
 void Layer::resize_weights(int input_count, int output_count) {
 	weights.resize(input_count, output_count);
