@@ -22,7 +22,7 @@ public:
 	NeuralNetwork(Matrix inputs, Matrix targets, double learning_rate, ActivationType activation = ActivationType::sigmoid, double mse_stop_point = 0.01);
 	~NeuralNetwork();
 
-	void train(int epoch_count);
+	void train(int epoch_count, GradientDescentType gd_type, int mini_batch_size = 32);
 	std::vector<double> predict(const std::vector<double>& input);
 
 	Layer& add_layer(int input_size, int output_size, bool is_output = false);

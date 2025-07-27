@@ -16,12 +16,23 @@ std::string activationToString(ActivationType act) {
 	switch (act) {
 	case ActivationType::sigmoid: return "sigmoid";
 	case ActivationType::relu: return "relu";
+	case ActivationType::leaky_relu: return "leaky relu";
 	case ActivationType::linear: return "linear";
 	default: return "unknown";
 	}
 }
 
-void NeuralNetwork::train(int epoch_times) {
+std::string gdTypeToString(GradientDescentType gdt) {
+	switch (gdt) {
+	case GradientDescentType::Stochastic: return "stochastic";
+	case GradientDescentType::Batch: return "batch";
+	case GradientDescentType::MiniBatch: return "mini-batch";
+	default: return "unknown";
+	}
+}
+
+
+void NeuralNetwork::train(int epoch_times, GradientDescentType gd_type, int mini_batch_size) {
 	std::cout << "Training started!\n\n";
 
 	std::cout << "Network structure:\n";
@@ -47,10 +58,14 @@ void NeuralNetwork::train(int epoch_times) {
 
 	std::cout << "Network params:\n";
 
-	std::cout << "	epoch count: " << epoch_times << "\n";
-	std::cout << "	mse_stop_point: " << mse_stop_point << "\n";
+	std::cout << "	sample count: " << inputs.rows << "\n";
 	std::cout << "	learning rate: " << learning_rate << "\n";
-	std::cout << "	activation_type: " << activationToString(activation_type) << "\n\n";
+	std::cout << "	activation_type: " << activationToString(activation_type) << "\n";
+	std::cout << "	gradient descent type: " << gdTypeToString(gd_type) << "\n";
+	if (gd_type == GradientDescentType::MiniBatch) std::cout << "	mini-batch size: " << mini_batch_size << "\n";
+	std::cout << "	epoch count: " << epoch_times << "\n";
+	std::cout << "	mse_stop_point: " << mse_stop_point << "\n\n";
+
 
 	int print_every_n_epochs = 1;
 	if (epoch_times > 10000) print_every_n_epochs = 1000;
@@ -60,46 +75,75 @@ void NeuralNetwork::train(int epoch_times) {
 	for (int epoch = 0; epoch < epoch_times; epoch++) {
 		double epoch_error_sum = 0.0;
 
-		int sample_count = inputs.rows;
-		for (int i = 0; i < sample_count; i++) {
-	
-				// ----- forward pass -----
-				std::vector<double> input = inputs[i];
-				std::vector<std::vector<double>> activations; // для хранения выходов всех слоёв
-				activations.push_back(input);
+		if (gd_type != GradientDescentType::Stochastic) {
+			// для батчевых методов зануляем накопление градиентов на всех слоях
+			for (auto& layer : layers) {
+				layer.zero_grad_accum();
+			}
+		}
 
-				// forward через всю сеть
+		int sample_count = inputs.rows;
+
+		int step = 1;
+		if (gd_type == GradientDescentType::MiniBatch) step = mini_batch_size;
+		else if (gd_type == GradientDescentType::Batch) step = sample_count;
+
+		for (int start = 0; start < sample_count; start += step) {
+			int batch_end = std::min(start + step, sample_count);
+
+			// для каждого примера в батче
+			for (int i = start; i < batch_end; ++i) {
+				auto input = inputs[i];
+				auto target = targets[i];
+
+				// forward pass
+				std::vector<std::vector<double>> activations;
+				activations.push_back(input); //first input layer is never activated
 				for (auto& layer : layers) {
+					//layer.setDropoutEnabled(!layer.isOutputLayer());
+					layer.setDropoutEnabled(false);
+
 					input = layer.forward(input);
 					activations.push_back(input);
 				}
-				std::vector<double> prediction = input; // выход последнего слоя
+				auto prediction = input;
 
-				// ----- error calculation -----
-				std::vector<double> deltas(targets.cols, 0.0);
+				// считаем дельты для выхода
+				std::vector<double> deltas(prediction.size());
 				double sample_mse = 0.0;
 
-				for (int d = 0; d < deltas.size(); d++) {
-					double delta = targets[i][d] - prediction[d];
-					deltas[d] = delta;
-					sample_mse += delta * delta;
+				for (int d = 0; d < deltas.size(); ++d) {
+					deltas[d] = targets[i][d] - prediction[d];
+					sample_mse += deltas[d] * deltas[d];
 				}
+
 				sample_mse /= deltas.size();
 				epoch_error_sum += sample_mse;
 
-				// ----- backward pass -----
-				for (int l = layers.size() - 1; l >= 0; l--) {
-					std::vector<double> input_to_layer = activations[l]; // входы в текущий слой
-					deltas = layers[l].backward(input_to_layer, deltas, learning_rate);
+				// backward pass
+				for (int l = layers.size() - 1; l >= 0; --l) {
+					auto& layer = layers[l];
+					auto input_to_layer = activations[l];
 
-					// VectorUtils::print(deltas, "deltas from backpropagation");
-					// (пока пропускаем вычисление новых дельт — добавишь позже при backprop через всю сеть)
-
+					if (gd_type == GradientDescentType::Stochastic) {
+						// обновляем сразу
+						deltas = layer.backward(input_to_layer, deltas, learning_rate);
+					}
+					else {
+						// возвращаем градиенты, но не обновляем веса
+						auto grads = layer.compute_gradients(input_to_layer, deltas); // 0.0 чтобы не обновлять
+						// нужно аккумулировать градиенты в layer (тебе надо модифицировать backward или добавить методы для накопления)
+						layer.accumulate_gradients(grads.dW, grads.dB); // сюда передавай dW, dB
+						deltas = grads.next_deltas;
+					}
 				}
-				//layer.backward(input, deltas, learning_rate);
-			
-			// optional: print per-sample MSE
-			//std::cout << "sample " << i + 1 << ": mse = " << sample_mse << "\n";
+			}
+			//after batch processing
+			if (gd_type != GradientDescentType::Stochastic) {
+				// применяем накопленные градиенты после батча
+				for (auto& layer : layers)
+					layer.apply_accumulated_gradients(learning_rate);
+			}
 		}
 
 		double epoch_mse = epoch_error_sum / sample_count;
@@ -108,7 +152,7 @@ void NeuralNetwork::train(int epoch_times) {
 		}
 		if (epoch_mse < mse_stop_point) {
 			std::cout << std::fixed << std::setprecision(4);
-			std::cout << "MSE is too low ("<< epoch_mse << "), no need to continue training... Quitting cycle"  << "\n";
+			std::cout << "MSE is too low (" << epoch_mse << "), no need to continue training... Quitting cycle" << "\n";
 			std::cout.unsetf(std::ios::fixed); // чтобы вернуть в обычный режим вывода
 			std::cout << std::setprecision(2); // можно сбросить, если нужно
 			break;
@@ -118,13 +162,13 @@ void NeuralNetwork::train(int epoch_times) {
 	std::cout << "\ntraining complete!\n";
 }
 
-
 std::vector<double> NeuralNetwork::predict(const std::vector<double>& input) {
 	_ASSERT(input.size() == inputs.cols);
 	std::vector<double> output = input;
 
 	if (debug_info) VectorUtils::print(output, "input");
 	for (auto& layer : layers) {
+		layer.setDropoutEnabled(false);
 		output = layer.forward(output);
 	}
 

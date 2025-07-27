@@ -49,6 +49,7 @@ public:
     Matrix operator*(double x) const;
     Matrix& operator=(const Matrix& other);
     Matrix& operator+=(const Matrix& other);
+    Matrix& operator-=(const Matrix& other);
     Matrix& operator*=(double scalar);
 
     // создаёт матрицу из одинаковых значений

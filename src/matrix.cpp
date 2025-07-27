@@ -103,6 +103,19 @@ Matrix& Matrix::operator+=(const Matrix& other) {
     return *this;
 }
 
+Matrix& Matrix::operator-=(const Matrix& other) {
+    if (rows != other.rows || cols != other.cols) {
+        throw std::invalid_argument("Matrix dimensions must match for operator+=");
+    }
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            // предполагаю, что у тебя есть метод доступа at(r,c)
+            data[r][c] -= other(r, c);
+        }
+    }
+    return *this;
+}
+
 Matrix& Matrix::operator*=(double scalar) {
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {

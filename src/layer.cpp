@@ -48,6 +48,19 @@ std::vector<double> Layer::forward(const std::vector<double>& data) {
 
 	auto result = (is_output_layer && activation_type == ActivationType::linear) ? z : VectorUtils::apply_activation(z, activation_type);
 
+	// применяем dropout только если включен и это НЕ выходной слой (dropout не для выхода)
+	if (dropout_enabled && !is_output_layer) {
+		generate_dropout_mask(result.size());
+		for (int i = 0; i < result.size(); ++i) {
+			if (dropout_mask[i]) {
+				result[i] = 0.0; // "выключили" нейрон
+			}
+			else {
+				result[i] /= (1.0 - dropout_rate); // усиливаем, чтобы компенсировать
+			}
+		}
+	}
+
 	last_output = result;
 	return result;
 }
@@ -74,30 +87,77 @@ std::vector<double> Layer::forward(const std::vector<double>& data) {
 std::vector<double> Layer::backward(const std::vector<double>& input,
 	const std::vector<double>& deltas,
 	double learning_rate) {
+	auto grads = compute_gradients(input, deltas);
+
+	// обновляем
+	grads.dW *= learning_rate;
+	weights += grads.dW;
+	
+
+	auto scaled_deltas = VectorUtils::scalar_multiply(grads.dB, learning_rate); // grads.dB = activated_deltas i suppose
+	VectorUtils::add_inplace(biases, scaled_deltas);
+
+	return grads.next_deltas;
+}
+
+
+// --- методы накопления градиентов ---
+LayerGradients Layer::compute_gradients(const std::vector<double>& input,
+	const std::vector<double>& deltas) {
 	_ASSERT(deltas.size() == weights.cols);
 	_ASSERT(input.size() == weights.rows);
 
-	// 1. вычисляем производную активации и активированные дельты: δ̂ = δ ⊙ σ'(z)
-	const auto& base_vec = (activation_type == ActivationType::sigmoid) ? last_output : last_pre_activation;
+	const auto& base_vec = (activation_type == ActivationType::sigmoid)
+		? last_output : last_pre_activation;
+
 	auto activation_derivative = VectorUtils::apply_activation_derivative(base_vec, activation_type);
 	auto activated_deltas = VectorUtils::elementwise_multiply(deltas, activation_derivative);
 
-	// 2. сохраняем копию старых весов для вычисления новых дельт
-	Matrix old_weights = weights;
+	// dW = input outer activated_deltas
+	Matrix dW = VectorUtils::outer_product(input, activated_deltas);
 
-	// 3. обновляем смещения (biases)
-	auto scaled_deltas = VectorUtils::scalar_multiply(activated_deltas, learning_rate);
-	VectorUtils::add_inplace(biases, scaled_deltas);
-	
-	// 4. обновляем веса через внешнее произведение и добавляем к матрице весов
-	Matrix correction = VectorUtils::outer_product(input, activated_deltas);
-	correction *= learning_rate;
-	weights += correction; // либо перегрузка оператора +=
+	// dB = activated_deltas
+	std::vector<double> dB = activated_deltas;
 
-	// 5. вычисляем новые дельты для предыдущего слоя: δ^(l-1) = W^T · δ̂
-	auto new_deltas = VectorUtils::mat_vec_mul(old_weights, activated_deltas);
+	// new_deltas = Wᵗ * δ̂
+	std::vector<double> new_deltas = VectorUtils::mat_vec_mul(weights, activated_deltas);
 
-	return new_deltas;
+	return { dW, dB, new_deltas };
+}
+
+void Layer::zero_grad_accum() {
+	grad_weights_accum = Matrix(weights.rows, weights.cols);
+	grad_biases_accum = std::vector<double>(biases.size(), 0.0);
+	accum_count = 0;
+}
+
+void Layer::accumulate_gradients(const Matrix& dW, const std::vector<double>& dB) {
+	for (int i = 0; i < weights.rows; ++i)
+		for (int j = 0; j < weights.cols; ++j)
+			grad_weights_accum(i, j) += dW(i, j);
+
+	for (int i = 0; i < biases.size(); ++i)
+		grad_biases_accum[i] += dB[i];
+
+	accum_count++;
+}
+
+void Layer::apply_accumulated_gradients(double learning_rate) {
+	for (int i = 0; i < weights.rows; ++i)
+		for (int j = 0; j < weights.cols; ++j)
+			weights(i, j) += learning_rate * (grad_weights_accum(i, j) / accum_count);
+
+	for (int i = 0; i < biases.size(); ++i)
+		biases[i] += learning_rate * (grad_biases_accum[i] / accum_count);
+
+	zero_grad_accum();
+}
+
+void Layer::generate_dropout_mask(int size) {
+	dropout_mask.resize(size);
+	for (int i = 0; i < size; ++i) {
+		dropout_mask[i] = (rand() / double(RAND_MAX)) > dropout_rate;
+	}
 }
 
 void Layer::resize_weights(int input_count, int output_count) {

@@ -8,8 +8,6 @@
 #include <cstdint>
 #include <filesystem>
 
-
-
 namespace fs = std::filesystem;
 
 int main() {
@@ -49,14 +47,13 @@ int main() {
 	}
 
 	//training
-	NeuralNetwork net(inputs, targets, 0.1f, ActivationType::sigmoid); // можно relu/sigmoid
+	NeuralNetwork net(inputs, targets, 0.1f, ActivationType::leaky_relu); // можно relu/sigmoid
 
 	net.add_layer(inputs.cols, 64);
 	net.add_layer(64, 32);
 	net.add_layer(32, 10, true);
 
-	net.train(15); // можно 10–20 эпох — больше не нужно на 1000 примерах
-
+	net.train(100, GradientDescentType::Stochastic, 16); // можно 10–20 эпох — больше не нужно на 1000 примерах
 
 	int num_test_images, test_rows, test_cols;
 	auto test_images = MnistLoader::load_images("datasets/t10k-images.idx3-ubyte", num_test_images, test_rows, test_cols);
