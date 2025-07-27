@@ -43,7 +43,7 @@ std::vector<double> VectorUtils::vec_mat_mul(const std::vector<double>& vec, con
     for (int col = 0; col < mat.cols; ++col) {
         double sum = 0.0;
         for (int row = 0; row < mat.rows; ++row) {
-            sum += vec[row] * mat.at(row, col);
+            sum += vec[row] * mat(row, col);
         }
         result[col] = sum;
     }
@@ -135,7 +135,7 @@ std::vector<double> VectorUtils::mat_vec_mul(const Matrix& mat, const std::vecto
     for (int row = 0; row < mat.rows; ++row) {
         double sum = 0;
         for (int col = 0; col < mat.cols; ++col) {
-            sum += mat.at(row, col) * vec[col];
+            sum += mat(row, col) * vec[col];
         }
         result[row] = sum;
     }
@@ -146,7 +146,7 @@ Matrix VectorUtils::outer_product(const std::vector<double>& a, const std::vecto
     Matrix result(static_cast<int>(a.size()), static_cast<int>(b.size()));
     for (int i = 0; i < result.rows; ++i) {
         for (int j = 0; j < result.cols; ++j) {
-            result.setValue(i, j, a[i] * b[j]);
+            result[i][j] = a[i] * b[j];
         }
     }
     return result;

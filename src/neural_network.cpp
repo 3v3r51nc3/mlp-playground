@@ -64,7 +64,7 @@ void NeuralNetwork::train(int epoch_times) {
 		for (int i = 0; i < sample_count; i++) {
 	
 				// ----- forward pass -----
-				std::vector<double> input = inputs.getRow(i);
+				std::vector<double> input = inputs[i];
 				std::vector<std::vector<double>> activations; // для хранения выходов всех слоёв
 				activations.push_back(input);
 
@@ -80,7 +80,7 @@ void NeuralNetwork::train(int epoch_times) {
 				double sample_mse = 0.0;
 
 				for (int d = 0; d < deltas.size(); d++) {
-					double delta = targets.at(i, d) - prediction[d];
+					double delta = targets[i][d] - prediction[d];
 					deltas[d] = delta;
 					sample_mse += delta * delta;
 				}

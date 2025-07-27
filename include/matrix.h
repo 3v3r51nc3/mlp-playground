@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <stdexcept>
 
 class Matrix {
 private:
@@ -15,16 +16,32 @@ public:
 
     // конструктор из вектора — создаёт матрицу-столбец (n x 1)
     Matrix(const std::vector<double>& vec);
+    
+    // доступ к элементу (i, j) с проверкой
+    double& operator()(int i, int j) {
+        if (i < 0 || i >= rows || j < 0 || j >= cols)
+            throw std::out_of_range("индекс элемента вне допустимого диапазона");
+        return data[i][j];
+    }
 
-    double& at(int i, int j);
-    double at(int i, int j) const;
+    double operator()(int i, int j) const {
+        if (i < 0 || i >= rows || j < 0 || j >= cols)
+            throw std::out_of_range("индекс элемента вне допустимого диапазона");
+        return data[i][j];
+    }
 
-    std::vector<double> getRow(int i) const;
-    void setRow(int i, const std::vector<double>& row);
+    // доступ к строке с проверкой
+    std::vector<double>& operator[](int i) {
+        if (i < 0 || i >= rows)
+            throw std::out_of_range("индекс строки вне допустимого диапазона");
+        return data[i];
+    }
 
-    void setValue(int i, int j, double value);
-    void addValue(int i, int j, double value);
-
+    const std::vector<double>& operator[](int i) const {
+        if (i < 0 || i >= rows)
+            throw std::out_of_range("индекс строки вне допустимого диапазона");
+        return data[i];
+    }
 
     Matrix transpose() const;
     Matrix operator+(const Matrix& other) const;
@@ -33,14 +50,6 @@ public:
     Matrix& operator=(const Matrix& other);
     Matrix& operator+=(const Matrix& other);
     Matrix& operator*=(double scalar);
-
-    double& operator()(int i, int j) {
-        return data[i][j];
-    }
-
-    double operator()(int i, int j) const {
-        return data[i][j];
-    }
 
     // создаёт матрицу из одинаковых значений
     static Matrix from_value(int rows, int cols, double val);

@@ -28,43 +28,6 @@ Matrix::Matrix(const std::vector<double>& vec) {
     }
 }
 
-double& Matrix::at(int i, int j) {
-    return data[i][j];
-}
-
-double Matrix::at(int i, int j) const {
-    return data[i][j];
-}
-
-std::vector<double> Matrix::getRow(int i) const {
-    if (i < 0 || i >= rows)
-        throw std::out_of_range("индекс строки вне допустимого диапазона");
-    return data[i];
-}
-
-void Matrix::setRow(int i, const std::vector<double>& row) {
-    if (i < 0 || i >= rows)
-        throw std::out_of_range("индекс строки вне допустимого диапазона");
-    if ((int)row.size() != cols)
-        throw std::invalid_argument("длина строки не совпадает с числом столбцов");
-
-    data[i] = row;
-}
-
-void Matrix::setValue(int i, int j, double value) {
-    if (i < 0 || i >= rows || j < 0 || j >= cols)
-        throw std::out_of_range("индекс элемента вне допустимого диапазона");
-
-    data[i][j] = value;
-}
-
-void Matrix::addValue(int i, int j, double value) {
-    if (i < 0 || i >= rows || j < 0 || j >= cols)
-        throw std::out_of_range("индекс элемента вне допустимого диапазона");
-
-    data[i][j] += value;
-}
-
 void Matrix::print(const std::string& name) const {
     std::cout << name << " (" << rows << "x" << cols << "):\n";
     for (const auto& row : data) {
@@ -80,7 +43,7 @@ Matrix Matrix::transpose() const {
     Matrix result(cols, rows);
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < cols; j++)
-            result.at(j, i) = data[i][j];
+            result(j, i) = data[i][j];
     return result;
 }
 
@@ -91,7 +54,7 @@ Matrix Matrix::operator+(const Matrix& other) const {
     Matrix result(rows, cols);
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < cols; j++)
-            result.at(i, j) = data[i][j] + other.at(i, j);
+            result(i, j) = data[i][j] + other(i, j);
     return result;
 }
 
@@ -103,7 +66,7 @@ Matrix Matrix::operator*(const Matrix& other) const {
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < other.cols; j++)
             for (int k = 0; k < cols; k++)
-                result.at(i, j) += data[i][k] * other.at(k, j);
+                result(i, j) += data[i][k] * other(k, j);
     return result;
 }
 
@@ -112,7 +75,7 @@ Matrix Matrix::operator*(double x) const
     Matrix result(rows, cols);
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < cols; j++)
-            result.at(i, j) += data[i][j] * x;
+            result(i, j) += data[i][j] * x;
     return result;
 }
 
@@ -134,7 +97,7 @@ Matrix& Matrix::operator+=(const Matrix& other) {
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
             // предполагаю, что у тебя есть метод доступа at(r,c)
-            this->at(r, c) += other.at(r, c);
+            data[r][c] += other(r, c);
         }
     }
     return *this;
@@ -143,7 +106,7 @@ Matrix& Matrix::operator+=(const Matrix& other) {
 Matrix& Matrix::operator*=(double scalar) {
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
-            this->at(r, c) *= scalar;
+            data[r][c] *= scalar;
         }
     }
     return *this;
@@ -154,7 +117,7 @@ Matrix Matrix::from_value(int rows, int cols, double val) {
     Matrix result(rows, cols);
     for (int i = 0; i < rows; ++i)
         for (int j = 0; j < cols; ++j)
-            result.at(i, j) = val;
+            result(i, j) = val;
     return result;
 }
 
@@ -166,7 +129,7 @@ Matrix Matrix::random(int rows, int cols, double min, double max) {
     Matrix result(rows, cols);
     for (int i = 0; i < rows; ++i)
         for (int j = 0; j < cols; ++j)
-            result.at(i, j) = dist(gen);
+            result(i, j) = dist(gen);
     return result;
 }
 
