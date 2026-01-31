@@ -5,14 +5,13 @@
 #include <stdexcept>
 
 class Matrix {
-private:
-    std::vector<std::vector<double>> data;
 public:
     int rows, cols;
 
     Matrix();
     Matrix(int r, int c); // пустая матрица
     Matrix(const std::vector<std::vector<double>>& d); // из 2D-вектора
+    Matrix(const Matrix& other) : rows(other.rows), cols(other.cols), data(other.data) {} // copy constructor
 
     // конструктор из вектора — создаёт матрицу-столбец (n x 1)
     Matrix(const std::vector<double>& vec);
@@ -64,4 +63,6 @@ public:
     }
 
     void print(const std::string& name = "Matrix") const;
+private:
+    std::vector<std::vector<double>> data;
 };

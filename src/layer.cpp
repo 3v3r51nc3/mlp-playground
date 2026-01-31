@@ -1,6 +1,8 @@
-﻿#include "../include/layer.h"
-#include <iostream>
+﻿#include <iostream>
 #include <random>
+#include <cassert>
+
+#include "../include/layer.h"
 
 Layer::Layer(int input_count, int output_count, double dropout_rate, bool output, ActivationType activation, bool debug_info) {
 	this->dropout_rate = dropout_rate;
@@ -109,8 +111,8 @@ std::vector<double> Layer::backward(const std::vector<double>& input,
 // --- методы накопления градиентов ---
 LayerGradients Layer::compute_gradients(const std::vector<double>& input,
 	const std::vector<double>& deltas) {
-	_ASSERT(deltas.size() == weights.cols);
-	_ASSERT(input.size() == weights.rows);
+	assert(deltas.size() == weights.cols);
+	assert(input.size() == weights.rows);
 
 	const auto& base_vec = (activation_type == ActivationType::sigmoid)
 		? last_output : last_pre_activation;

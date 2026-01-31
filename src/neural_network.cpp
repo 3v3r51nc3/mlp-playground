@@ -1,7 +1,9 @@
-﻿#include "../include/neural_network.h";
-#include "../include/vector_utils.h"
-#include <iostream>
+﻿#include <iostream>
 #include <iomanip>
+#include <cassert>
+
+#include "../include/neural_network.h"
+#include "../include/vector_utils.h"
 
 NeuralNetwork::NeuralNetwork(Matrix input, Matrix target, double learning_rate, double dropout_rate, double mse_stop_point) : inputs(input), 
 targets(target), learning_rate(learning_rate), dropout_rate(dropout_rate), mse_stop_point(mse_stop_point) {
@@ -112,7 +114,7 @@ void NeuralNetwork::train(int epoch_times, GradientDescentType gd_type, int mini
 				std::vector<double> deltas(prediction.size());
 				double sample_mse = 0.0;
 
-				for (int d = 0; d < deltas.size(); ++d) {
+				for (size_t d = 0; d < deltas.size(); ++d) {
 					deltas[d] = targets[i][d] - prediction[d];
 					sample_mse += deltas[d] * deltas[d];
 				}
@@ -163,7 +165,7 @@ void NeuralNetwork::train(int epoch_times, GradientDescentType gd_type, int mini
 }
 
 std::vector<double> NeuralNetwork::predict(const std::vector<double>& input) {
-	_ASSERT(input.size() == inputs.cols);
+	assert(input.size() == inputs.cols);
 	std::vector<double> output = input;
 
 	if (debug_info) VectorUtils::print(output, "input");
@@ -177,7 +179,7 @@ std::vector<double> NeuralNetwork::predict(const std::vector<double>& input) {
 	return output;
 }
 
-Layer& NeuralNetwork::add_layer(int input_size, int output_size, ActivationType activation, bool is_output) {
+Layer& NeuralNetwork::add_layer(int input_size, int output_size, bool is_output) {
 	Layer new_layer(input_size, output_size, dropout_rate, is_output);
 	layers.push_back(new_layer);
 

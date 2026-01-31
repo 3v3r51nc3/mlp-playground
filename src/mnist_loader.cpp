@@ -5,7 +5,11 @@
 #include <cstring> // если понадобится
 
 uint32_t MnistLoader::swap_endian(uint32_t val) {
+#ifdef _MSC_VER
     return _byteswap_ulong(val);
+#else
+    return __builtin_bswap32(val); // GCC/Clang intrinsic
+#endif
 }
 
 std::vector<std::vector<uint8_t>> MnistLoader::load_images(const std::string& path, int& num_images, int& rows, int& cols) {

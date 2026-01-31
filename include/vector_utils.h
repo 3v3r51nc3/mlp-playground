@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <algorithm>
+
 #include "../include/matrix.h"
 
 enum class ActivationType {
@@ -43,7 +45,7 @@ namespace Activation {
 		return x;
 	}
 
-	inline double linear_derivative(double y) {
+	inline double linear_derivative(double ) {
 		return 1.0;
 	}
 
