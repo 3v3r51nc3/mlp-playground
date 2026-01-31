@@ -35,7 +35,7 @@ double VectorUtils::mean(const std::vector<double>& data) {
 
 double VectorUtils::dot(const std::vector<double>& a, const std::vector<double>& b) {
     if (a.size() != b.size()) {
-        std::cerr << "Error: vectors have different sizes!" << std::endl;
+        std::cerr << "Error: vectors have different sizes!" << '\n';
         return 0.0;
     }
     double result = 0.0;

@@ -4,9 +4,9 @@
 #include "../include/vector_utils.h"
 
 enum class GradientDescentType {
-	Stochastic,    // SGD — обновление после каждого примера
-	MiniBatch,     // мини-батчи — обновление после группы примеров
-	Batch          // полный батч — обновление после всей эпохи
+    Stochastic,    // SGD - update after every example
+    MiniBatch,     // mini-batch - update after a group of examples
+    Batch          // full batch - update after the entire epoch
 };
 
 struct LayerGradients {
@@ -25,13 +25,13 @@ public:
     void resize_weights(int input_count, int output_count);
     void print(const std::string& name) const;
 
-    // --- новые методы для градиентного спуска ---
+    // --- new methods for gradient descent ---
     LayerGradients compute_gradients(const std::vector<double>& input, const std::vector<double>& deltas);
     void zero_grad_accum();
     void accumulate_gradients(const Matrix& dW, const std::vector<double>& dB);
     void apply_accumulated_gradients(double learning_rate);
 
-    // геттеры
+    // getters
     int getInputSize() const { return weights.rows; }
     int getOutputSize() const { return weights.cols; }
     bool isOutputLayer() const { return is_output_layer; }

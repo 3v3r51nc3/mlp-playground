@@ -7,89 +7,112 @@
 #include <fstream>
 #include <cstdint>
 #include <filesystem>
+#include <algorithm> // for std::min
 
 namespace fs = std::filesystem;
 
 int main() {
 
-	fs::path current_dir = fs::current_path();
+    fs::path current_dir = fs::current_path();
+    std::cout << "Current directory: " << current_dir << "\n\n";
 
-	std::cout << "Current directory: " << current_dir << "\n\n";
+    // --- Load Data ---
+    int num_train_images, rows, cols;
+    auto train_images = MnistLoader::load_images("datasets/train-images.idx3-ubyte", num_train_images, rows, cols);
 
-	int num_train_images, rows, cols;
-	auto train_images = MnistLoader::load_images("datasets/train-images.idx3-ubyte", num_train_images, rows, cols);
+    int num_train_labels;
+    auto train_labels = MnistLoader::load_labels("datasets/train-labels.idx1-ubyte", num_train_labels);
 
-	int num_train_labels;
-	auto train_labels = MnistLoader::load_labels("datasets/train-labels.idx1-ubyte", num_train_labels);
+    // SETTINGS: subset size
+    // Using 2000 samples makes it fast for CPU but provides better accuracy than 1000.
+    const int TRAIN_SIZE = 2000;
+    
+    // Safety check to ensure we don't exceed available images
+    int actual_train_size = std::min(TRAIN_SIZE, num_train_images);
+    std::cout << "Preparing training data (" << actual_train_size << " samples)...\n";
 
-	//1000 samples
-	const int TRAIN_SIZE = 1000;
-	Matrix inputs(TRAIN_SIZE, rows * cols);
-	Matrix targets(TRAIN_SIZE, 10); // 10 выходов в конце (классов)
+    Matrix inputs(actual_train_size, rows * cols);
+    Matrix targets(actual_train_size, 10); // 10 output classes (digits 0-9)
 
-	for (int i = 0; i < TRAIN_SIZE; ++i) {
-		// проходим по каждому из TRAIN_SIZE обучающих примеров
+    for (int i = 0; i < actual_train_size; ++i) {
+        // Iterate through each training example
 
-		for (int j = 0; j < rows * cols; ++j) {
-			// для каждого пикселя изображения (rows * cols - размер одного изображения)
-			// нормализуем значение пикселя из диапазона [0, 255] в [0, 1] для удобства обучения нейросети
-			// 0 - черный, 1 - белый
-			inputs(i, j) = train_images[i][j] / 255.0f;
-		}
+        for (int j = 0; j < rows * cols; ++j) {
+            // Normalize pixel value from [0, 255] to [0, 1]
+            // 0 - black, 1 - white
+            inputs(i, j) = train_images[i][j] / 255.0f;
+        }
 
-		// инициализируем вектор целей (one-hot encoding) длиной 10 (число классов в MNIST — цифры 0-9)
-		for (int j = 0; j < 10; ++j)
-			targets(i, j) = 0.0f;
+        // Initialize target vector (one-hot encoding)
+        for (int j = 0; j < 10; ++j)
+            targets(i, j) = 0.0f;
 
-		// ставим 1.0 в позиции, соответствующей метке train_labels[i]
-		// таким образом создаём правильный "ответ" для обучения нейросети (one-hot)
-		targets(i, train_labels[i]) = 1.0f;
-	}
+        // Set 1.0 at the index corresponding to the label
+        targets(i, train_labels[i]) = 1.0f;
+    }
 
-	//training
-	NeuralNetwork net(inputs, targets, 0.1, 0); // можно relu/sigmoid
+    // --- Network Setup ---
+    // Learning Rate: 0.1
+    NeuralNetwork net(inputs, targets, 0.1, 0); 
 
-	//ActivationType hidden_activation = ActivationType::tanh;
-	//ActivationType output_activation = ActivationType::sigmoid;
+    // Define Architecture
+    // Input -> Hidden (128) -> Hidden (64) -> Output (10)
+    net.add_layer(inputs.cols, 128);
+    net.add_layer(128, 64);
+    net.add_layer(64, 10, true);
 
-	net.add_layer(inputs.cols, 128);
-	net.add_layer(128, 64);
-	net.add_layer(64, 10, true);
+    std::cout << "Starting training...\n";
 
-	net.train(100, GradientDescentType::Stochastic, 16); // можно 10–20 эпох — больше не нужно на 1000 примерах
+    // --- Training ---
+    // Epochs: 50 (With small data, we need more epochs to converge)
+    // Batch Size: 32 (Good balance for small datasets)
+    net.train(50, GradientDescentType::Stochastic, 32); 
 
-	int num_test_images, test_rows, test_cols;
-	auto test_images = MnistLoader::load_images("datasets/t10k-images.idx3-ubyte", num_test_images, test_rows, test_cols);
+    // --- Testing ---
+    int num_test_images, test_rows, test_cols;
+    auto test_images = MnistLoader::load_images("datasets/t10k-images.idx3-ubyte", num_test_images, test_rows, test_cols);
 
-	int num_test_labels;
-	auto test_labels = MnistLoader::load_labels("datasets/t10k-labels.idx1-ubyte", num_test_labels);
+    int num_test_labels;
+    auto test_labels = MnistLoader::load_labels("datasets/t10k-labels.idx1-ubyte", num_test_labels);
 
-	int TEST_SIZE = 100;
-	int correct = 0;
+    // Test on a smaller subset for speed (500 images)
+    int TEST_SIZE = 500;
+    int actual_test_size = std::min(TEST_SIZE, num_test_images);
+    int correct = 0;
 
-	for (int i = 0; i < TEST_SIZE; ++i) {
-		std::vector<double> test_input;
-		for (int j = 0; j < test_rows * test_cols; ++j)
-			test_input.push_back(test_images[i][j] / 255.0);
+    std::cout << "Starting testing on " << actual_test_size << " samples...\n";
 
-		auto predicted_vector = net.predict(test_input);
+    for (int i = 0; i < actual_test_size; ++i) {
+        std::vector<double> test_input;
+        test_input.reserve(test_rows * test_cols);
+        
+        for (int j = 0; j < test_rows * test_cols; ++j)
+            test_input.push_back(test_images[i][j] / 255.0);
 
-		int predicted = 0;
-		double max_value = predicted_vector[0];
-		for (size_t z = 1; z < predicted_vector.size(); z++) {
-			if (predicted_vector[z] > max_value) {
-				max_value = predicted_vector[z];
-				predicted = z;
-			}
-		}
+        auto predicted_vector = net.predict(test_input);
 
-		int actual = test_labels[i];
+        // Find index of the maximum value
+        int predicted = 0;
+        double max_value = predicted_vector[0];
+        for (size_t z = 1; z < predicted_vector.size(); z++) {
+            if (predicted_vector[z] > max_value) {
+                max_value = predicted_vector[z];
+                predicted = z;
+            }
+        }
 
-		std::cout << "Predicted: " << predicted << " | Actual: " << actual << "\n";
+        int actual = test_labels[i];
 
-		if (predicted == actual) correct++;
-	}
+        // Print just a few examples to keep console clean
+        if (i < 10) { 
+            std::cout << "Predicted: " << predicted << " | Actual: " << actual << "\n";
+        }
 
-	double accuracy = (double)correct / TEST_SIZE;
-	std::cout << "Accuracy on " << TEST_SIZE << " test samples: " << accuracy * 100 << "%\n";
+        if (predicted == actual) correct++;
+    }
+
+    double accuracy = (double)correct / actual_test_size;
+    std::cout << "\nAccuracy on " << actual_test_size << " test samples: " << accuracy * 100 << "%\n";
+    
+    return 0;
 }

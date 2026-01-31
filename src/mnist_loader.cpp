@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
-#include <cstring> // если понадобится
 
 uint32_t MnistLoader::swap_endian(uint32_t val) {
 #ifdef _MSC_VER
@@ -15,7 +14,7 @@ uint32_t MnistLoader::swap_endian(uint32_t val) {
 std::vector<std::vector<uint8_t>> MnistLoader::load_images(const std::string& path, int& num_images, int& rows, int& cols) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << path << std::endl;
+        std::cerr << "Failed to open file: " << path << '\n';
         std::exit(1);
     }
 
@@ -43,7 +42,7 @@ std::vector<std::vector<uint8_t>> MnistLoader::load_images(const std::string& pa
 std::vector<uint8_t> MnistLoader::load_labels(const std::string& path, int& num_labels) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << path << std::endl;
+        std::cerr << "Failed to open file: " << path << '\n';
         std::exit(1);
     }
 

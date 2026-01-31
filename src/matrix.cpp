@@ -36,7 +36,7 @@ void Matrix::print(const std::string& name) const {
         }
         std::cout << '\n';
     }
-    std::cout << std::endl;
+    std::cout << '\n';
 }
 
 Matrix Matrix::transpose() const {
@@ -49,7 +49,7 @@ Matrix Matrix::transpose() const {
 
 Matrix Matrix::operator+(const Matrix& other) const {
     if (rows != other.rows || cols != other.cols)
-        throw std::invalid_argument("размеры матриц не совпадают для сложения");
+        throw std::invalid_argument("matrix dimensions do not match for addition");
 
     Matrix result(rows, cols);
     for (int i = 0; i < rows; i++)
@@ -60,7 +60,7 @@ Matrix Matrix::operator+(const Matrix& other) const {
 
 Matrix Matrix::operator*(const Matrix& other) const {
     if (cols != other.rows)
-        throw std::invalid_argument("несовместимые размеры для умножения");
+        throw std::invalid_argument("incompatible dimensions for multiplication");
 
     Matrix result(rows, other.cols);
     for (int i = 0; i < rows; i++)
@@ -80,12 +80,12 @@ Matrix Matrix::operator*(double x) const
 }
 
 Matrix& Matrix::operator=(const Matrix& other) {
-    if (this == &other)  // защита от самоприсваивания
+    if (this == &other)  // self-assignment protection
         return *this;
 
     rows = other.rows;
     cols = other.cols;
-    data = other.data;  // std::vector умеет сам корректно копировать данные
+    data = other.data;  // std::vector handles data copying correctly
 
     return *this;
 }
@@ -96,7 +96,7 @@ Matrix& Matrix::operator+=(const Matrix& other) {
     }
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
-            // предполагаю, что у тебя есть метод доступа at(r,c)
+            // assuming access via operator()
             data[r][c] += other(r, c);
         }
     }
@@ -109,7 +109,7 @@ Matrix& Matrix::operator-=(const Matrix& other) {
     }
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
-            // предполагаю, что у тебя есть метод доступа at(r,c)
+            // assuming access via operator()
             data[r][c] -= other(r, c);
         }
     }
@@ -147,13 +147,13 @@ Matrix Matrix::random(int rows, int cols, double min, double max) {
 }
 
 void Matrix::resize(int new_rows, int new_cols) {
-    // если размеры не меняются — ничего не делаем
+    // if dimensions don't change - do nothing
     if (new_rows == rows && new_cols == cols) return;
 
-    // создаём новый контейнер нужного размера
+    // create a new container of the required size
     std::vector<std::vector<double>> new_data(new_rows, std::vector<double>(new_cols, 0.0));
 
-    // копируем старые данные в новый контейнер (в пределах нового размера)
+    // copy old data to the new container (within the new bounds)
     int min_rows = std::min(rows, new_rows);
     int min_cols = std::min(cols, new_cols);
     for (int i = 0; i < min_rows; i++) {
@@ -162,7 +162,7 @@ void Matrix::resize(int new_rows, int new_cols) {
         }
     }
 
-    // заменяем старые данные на новые
+    // replace old data with new data
     data = std::move(new_data);
     rows = new_rows;
     cols = new_cols;
