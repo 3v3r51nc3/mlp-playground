@@ -93,7 +93,7 @@ static double activate(double x, ActivationType activation_type){
     case ActivationType::sigmoid:
         return Activation::sigmoid(x);
     case ActivationType::tanh:
-        return Activation::sigmoid(x);
+        return Activation::tanh(x);
     case ActivationType::relu:
         return Activation::relu(x);
     case ActivationType::leaky_relu:

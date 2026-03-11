@@ -1,7 +1,7 @@
 ﻿#include "../include/mnist_loader.h"
 #include <fstream>
 #include <iostream>
-#include <cstdlib>
+#include <stdexcept>
 
 uint32_t MnistLoader::swap_endian(uint32_t val) {
 #ifdef _MSC_VER
@@ -14,13 +14,15 @@ uint32_t MnistLoader::swap_endian(uint32_t val) {
 std::vector<std::vector<uint8_t>> MnistLoader::load_images(const std::string& path, int& num_images, int& rows, int& cols) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << path << '\n';
-        std::exit(1);
+        throw std::runtime_error("Failed to open file: " + path);
     }
 
     uint32_t magic_number = 0;
     file.read((char*)&magic_number, 4);
     magic_number = swap_endian(magic_number);
+    if (magic_number != 2051) {
+        throw std::runtime_error("Invalid MNIST image file magic number: " + path);
+    }
 
     file.read((char*)&num_images, 4);
     num_images = swap_endian(num_images);
@@ -42,13 +44,15 @@ std::vector<std::vector<uint8_t>> MnistLoader::load_images(const std::string& pa
 std::vector<uint8_t> MnistLoader::load_labels(const std::string& path, int& num_labels) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << path << '\n';
-        std::exit(1);
+        throw std::runtime_error("Failed to open file: " + path);
     }
 
     uint32_t magic_number = 0;
     file.read((char*)&magic_number, 4);
     magic_number = swap_endian(magic_number);
+    if (magic_number != 2049) {
+        throw std::runtime_error("Invalid MNIST label file magic number: " + path);
+    }
 
     file.read((char*)&num_labels, 4);
     num_labels = swap_endian(num_labels);

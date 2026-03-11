@@ -12,7 +12,7 @@ This project implements the core mathematical foundations of neural networks wit
   Standalone implementations of Matrix and Vector classes.
 
 - **Configurable Architecture**  
-  Supports variable layer sizes and multiple activation functions.
+  Supports variable layer sizes and configurable per-layer activation functions.
 
 - **Manual Backpropagation**  
   Explicit implementation of the chain rule and weight updates.
@@ -20,8 +20,8 @@ This project implements the core mathematical foundations of neural networks wit
 - **MNIST Support**  
   Includes a loader for the MNIST handwritten digit dataset.
 
-- **Performance-Oriented**  
-  Uses OpenMP for multi-threaded CPU training.
+- **Portable Build**  
+  Uses CMake with optional OpenMP linkage when supported by the toolchain.
 
 ---
 
@@ -88,6 +88,5 @@ The program will:
 
 ## Notes
 
-- The implementation is intended for educational purposes.
 - All neural network logic is implemented manually without external ML libraries.
-- Performance depends on compiler optimizations and OpenMP support.
+- Performance depends on compiler optimizations and whether OpenMP is available on the build machine.

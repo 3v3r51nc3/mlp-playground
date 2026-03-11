@@ -24,5 +24,5 @@ public:
 	void train(int epoch_count, GradientDescentType gd_type, int mini_batch_size = 32);
 	std::vector<double> predict(const std::vector<double>& input);
 
-	Layer& add_layer(int input_size, int output_size, bool is_output = false);
+	Layer& add_layer(int input_size, int output_size, bool is_output = false, ActivationType activation = ActivationType::sigmoid);
 };

@@ -111,10 +111,14 @@ std::vector<double> Layer::backward(const std::vector<double>& input,
 // --- gradient accumulation methods ---
 LayerGradients Layer::compute_gradients(const std::vector<double>& input,
     const std::vector<double>& deltas) {
-    assert(deltas.size() == weights.cols);
-    assert(input.size() == weights.rows);
+    assert(deltas.size() == static_cast<size_t>(weights.cols));
+    assert(input.size() == static_cast<size_t>(weights.rows));
 
-    const auto& base_vec = (activation_type == ActivationType::sigmoid)
+    const bool derivative_uses_activated_output =
+        activation_type == ActivationType::sigmoid ||
+        activation_type == ActivationType::tanh;
+
+    const auto& base_vec = derivative_uses_activated_output
         ? last_output : last_pre_activation;
 
     auto activation_derivative = VectorUtils::apply_activation_derivative(base_vec, activation_type);

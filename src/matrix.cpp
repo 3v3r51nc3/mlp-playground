@@ -5,9 +5,7 @@
 #include <random>
 
 // m n * n p = m p
-Matrix::Matrix() {
-
-}
+Matrix::Matrix() : rows(0), cols(0) {}
 
 Matrix::Matrix(int r, int c) : rows(r), cols(c) {
     data.resize(rows, std::vector<double>(cols, 0.0));
