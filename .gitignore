@@ -46,3 +46,4 @@ install_manifest.txt
 compile_commands.json
 Makefile
 ninja.build
+.DS_Store
